@@ -1,6 +1,7 @@
 import { Router } from "express";
 import prisma from "../prisma";
 import { getUserId } from "../utils/auth";
+import jwt from "jsonwebtoken";
 
 const router = Router();
 
@@ -12,7 +13,7 @@ router.post("/", async (req, res) => {
   const { name, description } = req.body;
 
   const project = await prisma.project.create({
-    data: { name, description, userId: userId }
+    data: { name, description, userId: userId },
   });
 
   res.json(project);
@@ -25,10 +26,26 @@ router.get("/", async (req, res) => {
 
   const projects = await prisma.project.findMany({
     where: { userId: userId },
-    include: { tasks: true }
+    include: { tasks: true },
   });
 
   res.json(projects);
+});
+
+// GET SINGLE PROJECT
+router.get("/:id", async (req, res) => {
+  const userId = getUserId(req);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  const { id } = req.params;
+
+  const project = await prisma.project.findFirst({
+    where: { id: Number(id), userId },
+    include: { tasks: true },
+  });
+
+  if (!project) return res.status(404).json({ error: "Project not found" });
+  res.json(project);
 });
 
 // UPDATE PROJECT
@@ -45,7 +62,7 @@ router.put("/:id", async (req, res) => {
 
   const updated = await prisma.project.update({
     where: { id },
-    data: req.body
+    data: req.body,
   });
 
   res.json(updated);
