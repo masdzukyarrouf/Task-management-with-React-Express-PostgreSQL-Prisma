@@ -16,11 +16,9 @@ export default function Login() {
       console.log("Sending:", { email, password });
 
       const res = await api.post("/auth/login/", { email, password });
-      console.log("Response:", res.data);
-
       localStorage.setItem("token", res.data.token);
-      console.log("Token saved to localStorage:", res.data.token);
-      navigate("/");
+
+      navigate("/projects");
     } catch (err: any) {
       console.log("Error details:", err);
       console.log("Error response:", err.response);

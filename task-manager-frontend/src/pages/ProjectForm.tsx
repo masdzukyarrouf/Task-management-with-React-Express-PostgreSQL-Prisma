@@ -38,9 +38,9 @@ export default function ProjectForm() {
     
     try {
       if (id) {
-        await api.put(`/projects/${id}`, { name, description });
+        await api.put(`/api/projects/${id}`, { name, description });
       } else {
-        await api.post("/projects", { name, description });
+        await api.post("/api/projects", { name, description });
       }
       navigate("/projects");
     } catch (error) {
@@ -83,7 +83,7 @@ export default function ProjectForm() {
                 value={name}
                 onChange={e => setName(e.target.value)}
                 placeholder="Enter project name"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                className="w-full text-black px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
               />
             </div>
 
@@ -97,7 +97,7 @@ export default function ProjectForm() {
                 value={description}
                 onChange={e => setDescription(e.target.value)}
                 placeholder="Describe your project..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 resize-vertical"
+                className="w-full text-black px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 resize-vertical"
               />
             </div>
 
@@ -105,7 +105,7 @@ export default function ProjectForm() {
               <button
                 type="button"
                 onClick={() => navigate("/projects")}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                className="px-4 py-2 text-sm font-medium text-gray-200 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
               >
                 Cancel
               </button>

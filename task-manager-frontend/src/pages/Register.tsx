@@ -24,7 +24,7 @@ export default function Register() {
 
       console.log("Register response:", res.data);
 
-      navigate("/login"); // redirect after successful registration
+      navigate("/"); // redirect after successful registration
     } catch (err: any) {
       console.log(err);
 

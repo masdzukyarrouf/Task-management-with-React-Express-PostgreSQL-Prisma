@@ -5,7 +5,6 @@ import jwt from "jsonwebtoken";
 
 const router = Router();
 
-// CREATE PROJECT
 router.post("/", async (req, res) => {
   const userId = getUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
@@ -13,23 +12,34 @@ router.post("/", async (req, res) => {
   const { name, description } = req.body;
 
   const project = await prisma.project.create({
-    data: { name, description, userId: userId },
+    data: { name, description, userId: (userId as any)["userId"] },
   });
 
   res.json(project);
 });
 
-// GET USER PROJECTS
 router.get("/", async (req, res) => {
-  const userId = getUserId(req);
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+  try {
+    const userId = getUserId(req);
+    
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
 
-  const projects = await prisma.project.findMany({
-    where: { userId: userId },
-    include: { tasks: true },
-  });
+    
+    const projects = await prisma.project.findMany({
+      where: { userId: (userId as any)["userId"] },
+      include: { tasks: true },
+    });
 
-  res.json(projects);
+    res.json(projects);
+    
+  } catch (error) {
+    res.status(500).json({ 
+      error: "Internal server error",
+      details: error 
+    });
+  }
 });
 
 // GET SINGLE PROJECT

@@ -12,6 +12,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.use((req, res, next) => {
+  console.log(`Incoming request: ${req.method} ${req.url}`);
+  next();
+});
+
 app.get("/", async (req, res) => {
   const users = await prisma.user.findMany();
   res.json(users);
@@ -23,6 +28,13 @@ app.use("/auth", authRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/tasks", taskRoutes);
 
+// app.use((error, req, res, next) => {
+//   console.error("Global error handler:", error);
+//   res.status(500).json({ error: error.message });
+// });
+
 app.listen(4000, () => {
   console.log("Server running on port 4000");
 });
+
+
