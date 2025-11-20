@@ -26,13 +26,39 @@ router.get("/", async (req, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    
     const projects = await prisma.project.findMany({
       where: { userId: (userId as any)["userId"] },
-      include: { tasks: true },
+      include: { 
+        tasks: {
+          orderBy: [
+            {
+              status: 'asc'
+            },
+            {
+              position: 'asc'
+            }
+          ]
+        } 
+      },
     });
 
-    res.json(projects);
+    // Custom sort tasks within each project: in-progress -> todo -> done
+    const projectsWithSortedTasks = projects.map(project => ({
+      ...project,
+      tasks: project.tasks.sort((a, b) => {
+        const getStatusOrder = (status: string): number => {
+          switch (status) {
+            case 'in-progress': return 1;
+            case 'todo': return 2;
+            case 'done': return 3;
+            default: return 999;
+          }
+        };
+        
+        return getStatusOrder(a.status) - getStatusOrder(b.status);
+      })
+    }));
+    res.json(projectsWithSortedTasks);
     
   } catch (error) {
     res.status(500).json({ 
@@ -42,7 +68,6 @@ router.get("/", async (req, res) => {
   }
 });
 
-// GET SINGLE PROJECT
 router.get("/:id", async (req, res) => {
   const userId = getUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
@@ -50,7 +75,7 @@ router.get("/:id", async (req, res) => {
   const { id } = req.params;
 
   const project = await prisma.project.findFirst({
-    where: { id: Number(id), userId },
+    where: { id: Number(id), userId : (userId as any)["userId"] },
     include: { tasks: true },
   });
 
@@ -58,16 +83,16 @@ router.get("/:id", async (req, res) => {
   res.json(project);
 });
 
-// UPDATE PROJECT
+
 router.put("/:id", async (req, res) => {
   const userId = getUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
   const id = Number(req.params.id);
 
-  // check ownership
+  
   const project = await prisma.project.findUnique({ where: { id } });
-  if (!project || project.userId !== userId)
+  if (!project || project.userId !== (userId as any)["userId"])
     return res.status(403).json({ error: "Forbidden" });
 
   const updated = await prisma.project.update({
@@ -78,7 +103,6 @@ router.put("/:id", async (req, res) => {
   res.json(updated);
 });
 
-// DELETE PROJECT
 router.delete("/:id", async (req, res) => {
   const userId = getUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
@@ -86,7 +110,7 @@ router.delete("/:id", async (req, res) => {
   const id = Number(req.params.id);
 
   const project = await prisma.project.findUnique({ where: { id } });
-  if (!project || project.userId !== userId)
+  if (!project || project.userId !== (userId as any)["userId"])
     return res.status(403).json({ error: "Forbidden" });
 
   await prisma.project.delete({ where: { id } });

@@ -10,14 +10,14 @@ export default function ProjectForm() {
   const [description, setDescription] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load for edit
+  
   useEffect(() => {
     if (!id) return;
     
     const loadProject = async () => {
       try {
         setIsLoading(true);
-        const res = await api.get(`/projects/${id}`);
+        const res = await api.get(`api/projects/${id}`);
         setName(res.data.name);
         setDescription(res.data.description);
       } catch (error) {
@@ -50,6 +50,8 @@ export default function ProjectForm() {
     }
   };
 
+
+  
   if (isLoading && id) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
