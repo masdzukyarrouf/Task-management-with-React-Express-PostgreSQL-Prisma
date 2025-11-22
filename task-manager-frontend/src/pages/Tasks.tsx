@@ -172,6 +172,7 @@ export default function Tasks() {
 
   const handleDragStart = (event: DragStartEvent) => {
     // setActiveId(event.active.id as number);
+    event.active.id;
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
