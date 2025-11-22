@@ -9,27 +9,25 @@ interface Project {
 }
 
 export default function TaskForm() {
-  const { id } = useParams(); // For edit mode
+  const { id } = useParams();
   const navigate = useNavigate();
   const { addAlert } = useAlert();
-  
+
   const [projects, setProjects] = useState<Project[]>([]);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     status: "todo",
     position: 0,
-    projectId: ""
+    projectId: "",
   });
   const [isLoading, setIsLoading] = useState(false);
 
   const isEditMode = Boolean(id);
 
   useEffect(() => {
-    // Fetch projects for dropdown
     api.get("/api/projects/").then((res) => setProjects(res.data));
 
-    // If edit mode, fetch task data
     if (isEditMode) {
       api.get(`/api/tasks/${id}`).then((res) => {
         const task = res.data;
@@ -38,15 +36,14 @@ export default function TaskForm() {
           description: task.description || "",
           status: task.status,
           position: task.position,
-          projectId: task.projectId.toString()
+          projectId: task.projectId.toString(),
         });
       });
     } else {
-      // For new task, check if projectId is in URL params
       const urlParams = new URLSearchParams(window.location.search);
-      const projectId = urlParams.get('projectId');
+      const projectId = urlParams.get("projectId");
       if (projectId) {
-        setFormData(prev => ({ ...prev, projectId }));
+        setFormData((prev) => ({ ...prev, projectId }));
       }
     }
   }, [id, isEditMode]);
@@ -59,7 +56,7 @@ export default function TaskForm() {
       const payload = {
         ...formData,
         projectId: Number(formData.projectId),
-        position: Number(formData.position)
+        position: Number(formData.position),
       };
 
       if (isEditMode) {
@@ -69,8 +66,8 @@ export default function TaskForm() {
         await api.post("/api/tasks", payload);
         addAlert("Task created successfully", "success");
       }
-      
-      navigate("/tasks");
+
+      navigate("/tasks", { state: { id: formData.projectId } });
     } catch (error) {
       console.error("Error saving task:", error);
       addAlert(`Failed to ${isEditMode ? "update" : "create"} task`, "error");
@@ -79,10 +76,14 @@ export default function TaskForm() {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
@@ -93,11 +94,17 @@ export default function TaskForm() {
           {isEditMode ? "Edit Task" : "Create New Task"}
         </h1>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
+        >
           <div className="space-y-6">
             {/* Project Selection */}
             <div>
-              <label htmlFor="projectId" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="projectId"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Project *
               </label>
               <select
@@ -120,7 +127,10 @@ export default function TaskForm() {
 
             {/* Title */}
             <div>
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="title"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Title *
               </label>
               <input
@@ -137,7 +147,10 @@ export default function TaskForm() {
 
             {/* Description */}
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="description"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Description
               </label>
               <textarea
@@ -154,7 +167,10 @@ export default function TaskForm() {
             {/* Status and Position */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="status"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Status
                 </label>
                 <select
@@ -169,21 +185,6 @@ export default function TaskForm() {
                   <option value="done">Done</option>
                 </select>
               </div>
-
-              <div>
-                <label htmlFor="position" className="block text-sm font-medium text-gray-700 mb-2">
-                  Position
-                </label>
-                <input
-                  type="number"
-                  id="position"
-                  name="position"
-                  value={formData.position}
-                  onChange={handleChange}
-                  min="0"
-                  className="text-black block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                />
-              </div>
             </div>
           </div>
 
@@ -191,7 +192,9 @@ export default function TaskForm() {
           <div className="flex justify-end space-x-3 mt-8 pt-6 border-t border-gray-200">
             <button
               type="button"
-              onClick={() => navigate("/tasks")}
+              onClick={() =>
+                navigate("/tasks", { state: { id: formData.projectId } })
+              }
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
               Cancel
@@ -201,7 +204,11 @@ export default function TaskForm() {
               disabled={isLoading}
               className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
             >
-              {isLoading ? "Saving..." : isEditMode ? "Update Task" : "Create Task"}
+              {isLoading
+                ? "Saving..."
+                : isEditMode
+                ? "Update Task"
+                : "Create Task"}
             </button>
           </div>
         </form>

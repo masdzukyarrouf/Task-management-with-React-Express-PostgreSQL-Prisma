@@ -32,33 +32,14 @@ router.get("/", async (req, res) => {
         tasks: {
           orderBy: [
             {
-              status: 'asc'
-            },
-            {
-              position: 'asc'
+              position: 'asc' 
             }
           ]
         } 
       },
     });
 
-    // Custom sort tasks within each project: in-progress -> todo -> done
-    const projectsWithSortedTasks = projects.map(project => ({
-      ...project,
-      tasks: project.tasks.sort((a, b) => {
-        const getStatusOrder = (status: string): number => {
-          switch (status) {
-            case 'in-progress': return 1;
-            case 'todo': return 2;
-            case 'done': return 3;
-            default: return 999;
-          }
-        };
-        
-        return getStatusOrder(a.status) - getStatusOrder(b.status);
-      })
-    }));
-    res.json(projectsWithSortedTasks);
+    res.json(projects);
     
   } catch (error) {
     res.status(500).json({ 
@@ -117,5 +98,6 @@ router.delete("/:id", async (req, res) => {
 
   res.json({ message: "Deleted" });
 });
+
 
 export default router;

@@ -12,7 +12,6 @@ router.post("/", async (req, res) => {
     title,
     description,
     status = "todo",
-    position = 0,
     projectId,
   } = req.body;
 
@@ -21,11 +20,30 @@ router.post("/", async (req, res) => {
   if (!project || project.userId !== (userId as any)["userId"])
     return res.status(403).json({ error: "Forbidden" });
 
-  const task = await prisma.task.create({
-    data: { title, description, status, position, projectId },
-  });
+  try {
+    const maxPositionTask = await prisma.task.findFirst({
+      where: { projectId },
+      orderBy: { position: 'desc' },
+      select: { position: true }
+    });
 
-  res.json(task);
+    const newPosition = maxPositionTask ? maxPositionTask.position + 1 : 0;
+    const task = await prisma.task.create({
+      data: { 
+        title, 
+        description, 
+        status, 
+        position: newPosition, 
+        projectId 
+      },
+    });
+
+    res.json(task);
+    
+  } catch (error) {
+    console.error('Create task error:', error);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 router.put("/:id", async (req, res) => {
@@ -65,54 +83,55 @@ router.delete("/:id", async (req, res) => {
   if (!task || task.project.userId !== (userId as any)["userId"])
     return res.status(403).json({ error: "Forbidden" });
 
+  const projectId = task.projectId;
+  
   await prisma.task.delete({ where: { id } });
-
+  
+  await reorderTaskPositions(projectId);
+  
   res.json({ message: "Deleted" });
 });
 
-// router.get("/", async (req, res) => {
-//   const userId = getUserId(req);
-//   if (!userId) return res.status(401).json({ error: "Unauthorized" });
+router.patch("/:id/reorder", async (req, res) => {
+  const userId = getUserId(req);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-//   try {
-//     const tasks = await prisma.task.findMany({
-//       where: {
-//         project: {
-//           userId: (userId as any)["userId"]
-//         }
-//       },
-//       include: {
-//         project: true
-//       },
-//       orderBy: [
-//         {
-//           position: 'asc'
-//         }
-//       ]
-//     });
+  const id = Number(req.params.id);
+  const { newPosition } = req.body;
 
-//     const sortedTasks = tasks.sort((a, b) => {
-//       const getStatusOrder = (status: string): number => {
-//         switch (status) {
-//           case 'in-progress': return 1;
-//           case 'todo': return 2;
-//           case 'done': return 3;
-//           default: return 999;
-//         }
-//       };
-      
-//       console.log(sortedTasks);
-//       return getStatusOrder(a.status) - getStatusOrder(b.status);
-//     });
+  const task = await prisma.task.findUnique({
+    where: { id },
+    include: { project: true },
+  });
 
-//     res.json(sortedTasks);
-//   } catch (error) {
-//     res.status(500).json({ 
-//       error: "Internal server error",
-//       details: error 
-//     });
-//   }
-// });
+  if (!task || task.project.userId !== (userId as any)["userId"])
+    return res.status(403).json({ error: "Forbidden" });
+
+  // Get all tasks in the project
+  const tasks = await prisma.task.findMany({
+    where: { projectId: task.projectId },
+    orderBy: { position: 'asc' }
+  });
+
+  // Remove the moved task from the list
+  const filteredTasks = tasks.filter(t => t.id !== id);
+  
+  // Insert the moved task at the new position
+  filteredTasks.splice(newPosition, 0, task);
+
+  // Update all positions in a transaction
+  const updateOperations = filteredTasks.map((t, index) =>
+    prisma.task.update({
+      where: { id: t.id },
+      data: { position: index }
+    })
+  );
+
+  await prisma.$transaction(updateOperations);
+
+  res.json({ message: "Reordered successfully" });
+}); 
+
 
 router.get("/:id", async (req, res) => {
   const userId = getUserId(req);
@@ -135,5 +154,31 @@ router.get("/:id", async (req, res) => {
   if (!task) return res.status(404).json({ error: "Task not found" });
   res.json(task);
 });
+
+
+// reorder
+const reorderTaskPositions = async (projectId: number) => {
+  try {
+    const tasks = await prisma.task.findMany({
+      where: { projectId },
+      orderBy: { position: 'asc' },
+      select: { id: true } 
+    });
+
+    const updateOperations = tasks.map((task, index) => 
+      prisma.task.update({
+        where: { id: task.id },
+        data: { position: index }
+      })
+    );
+
+    await prisma.$transaction(updateOperations);
+
+    console.log(`Reordered ${tasks.length} tasks for project ${projectId}`);
+  } catch (error) {
+    console.error('Error reordering tasks:', error);
+  }
+};
+
 
 export default router;

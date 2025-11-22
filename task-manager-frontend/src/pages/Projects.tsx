@@ -101,6 +101,7 @@ export default function Projects() {
                       </span>
                       <Link
                         to="/tasks"
+                         state={{ id: [p.id] }} 
                         className="ml-2 text-indigo-500 hover:text-indigo-300 underline transition-colors"
                         title="Go to Projects"
                       >

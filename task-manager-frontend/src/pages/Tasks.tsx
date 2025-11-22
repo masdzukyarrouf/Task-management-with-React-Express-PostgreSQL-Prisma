@@ -1,7 +1,24 @@
 import { useEffect, useState } from "react";
 import { useAlert } from "../context/AlertContext";
 import api from "../api/axios";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 
 interface Project {
   id: number;
@@ -18,6 +35,92 @@ interface Task {
   projectId: number;
 }
 
+function SortableTask({
+  task,
+  onDeleteClick,
+  getStatusBadge,
+}: {
+  task: Task;
+  onDeleteClick: (task: Task) => void;
+  getStatusBadge: (status: string) => React.JSX.Element;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <tr
+      ref={setNodeRef}
+      style={style}
+      className={`hover:bg-gray-50 transition-all duration-200 ${
+        isDragging ? "opacity-50 bg-blue-50 z-10" : ""
+      }`}
+    >
+      <td className="pl-3 py-4">
+        <div className="text-sm text-gray-500 max-w-xs truncate">
+          <button
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing focus:outline-none"
+          >
+            <svg
+              color="white"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <circle cx="8" cy="6" r="1.5" />
+              <circle cx="8" cy="12" r="1.5" />
+              <circle cx="8" cy="18" r="1.5" />
+              <circle cx="16" cy="6" r="1.5" />
+              <circle cx="16" cy="12" r="1.5" />
+              <circle cx="16" cy="18" r="1.5" />
+            </svg>
+          </button>
+        </div>
+      </td>
+      <td className="pr-6 py-4">
+        <div className="text-sm font-medium text-gray-900 flex items-center">
+          {task.title}
+        </div>
+      </td>
+      <td className="px-6 py-4">
+        <div className="text-sm text-gray-500 max-w-xs truncate">
+          {task.description || "No description"}
+        </div>
+      </td>
+      <td className="px-6 py-4">{getStatusBadge(task.status)}</td>
+      <td className="px-6 py-4">
+        <div className="flex space-x-2">
+          <Link
+            to={`/tasks/${task.id}/edit`}
+            className="inline-flex items-center px-3 py-1 border border-transparent text-sm rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+          >
+            ✏️ Edit
+          </Link>
+          <button
+            onClick={() => onDeleteClick(task)}
+            className="inline-flex items-center px-3 py-1 border border-gray-300 text-sm rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+          >
+            🗑️ Delete
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 export default function Tasks() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -25,7 +128,35 @@ export default function Tasks() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  // const [activeId, setActiveId] = useState<number | null>(null);
   const { addAlert } = useAlert();
+  const location = useLocation();
+
+  const projectIdFromLink = location.state?.id;
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  useEffect(() => {
+    if (projectIdFromLink) {
+      let projectId = projectIdFromLink;
+      if (
+        typeof projectIdFromLink != "number" &&
+        typeof projectIdFromLink != "string"
+      ) {
+        projectId = projectIdFromLink[0];
+      } else {
+        projectId = projectIdFromLink;
+      }
+      setSelectedProject(
+        projects.find((p) => p.id === Number(projectId)) || null
+      );
+    }
+  }, [projects, projectIdFromLink]);
 
   useEffect(() => {
     api.get("/api/projects/").then((res) => setProjects(res.data));
@@ -39,6 +170,43 @@ export default function Tasks() {
     }
   }, [selectedProject]);
 
+  const handleDragStart = (event: DragStartEvent) => {
+    // setActiveId(event.active.id as number);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    // setActiveId(null);
+
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = tasks.findIndex((task) => task.id === active.id);
+    const newIndex = tasks.findIndex((task) => task.id === over.id);
+
+    if (oldIndex !== newIndex) {
+      const newTasks = arrayMove(tasks, oldIndex, newIndex);
+      setTasks(newTasks);
+
+      try {
+        await api.patch(`/api/tasks/${active.id}/reorder`, {
+          newPosition: newIndex,
+        });
+
+        addAlert("Task reordered successfully", "success");
+      } catch (error) {
+        console.error("Reorder error:", error);
+        addAlert("Failed to reorder task", "error");
+
+        if (selectedProject) {
+          const projectWithTasks = await api.get(
+            `/api/projects/${selectedProject.id}`
+          );
+          setTasks(projectWithTasks.data.tasks || []);
+        }
+      }
+    }
+  };
+
   const handleDeleteClick = (task: Task) => {
     setTaskToDelete(task);
     setShowConfirm(true);
@@ -46,11 +214,17 @@ export default function Tasks() {
 
   const handleConfirmDelete = async () => {
     if (!taskToDelete) return;
-
     setIsDeleting(true);
+
     try {
       await api.delete(`/api/tasks/${taskToDelete.id}`);
-      setTasks(tasks.filter((t) => t.id !== taskToDelete.id));
+      if (selectedProject) {
+        const projectWithTasks = await api.get(
+          `/api/projects/${selectedProject.id}`
+        );
+        setSelectedProject(projectWithTasks.data);
+        setTasks(projectWithTasks.data.tasks || []);
+      }
       setShowConfirm(false);
       setTaskToDelete(null);
       addAlert("Task deleted successfully", "success");
@@ -67,7 +241,7 @@ export default function Tasks() {
     setTaskToDelete(null);
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string): React.JSX.Element => {
     const statusConfig = {
       todo: { color: "bg-gray-100 text-gray-800", label: "To Do" },
       "in-progress": {
@@ -91,10 +265,9 @@ export default function Tasks() {
     <div className="min-w-screen min-h-screen p-4 bg-white">
       <h1 className="text-black font-bold mb-4 text-2xl">Tasks</h1>
 
-      {/* Project Selection */}
       <div className="mb-6">
         <label className="block text-xl font-bold text-gray-700 mb-2">
-          Select 
+          Select
           <Link
             to="/projects"
             className="ml-2 text-indigo-500 hover:text-indigo-300 hover:underline transition-colors"
@@ -138,66 +311,47 @@ export default function Tasks() {
           </div>
 
           <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Title
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Description
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Position
-                  </th> */}
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {tasks.map((task) => (
-                  <tr
-                    key={task.id}
-                    className="hover:bg-gray-50 transition-all duration-200"
-                  >
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">
-                        {task.title}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-500 max-w-xs truncate">
-                        {task.description || "No description"}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">{getStatusBadge(task.status)}</td>
-                    {/* <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">{task.position}</div>
-                    </td> */}
-                    <td className="px-6 py-4">
-                      <div className="flex space-x-2">
-                        <Link
-                          to={`/tasks/${task.id}/edit`}
-                          className="inline-flex items-center px-3 py-1 border border-transparent text-sm rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
-                        >
-                          ✏️ Edit
-                        </Link>
-                        <button
-                          onClick={() => handleDeleteClick(task)}
-                          className="inline-flex items-center px-3 py-1 border border-gray-300 text-sm rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
-                        >
-                          🗑️ Delete
-                        </button>
-                      </div>
-                    </td>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                  <tr>
+                    <th className="px-1 py-3 text-left text-xs font-medium text-gray-500 "></th>
+                    <th className="pr-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Title
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Description
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  <SortableContext
+                    items={tasks.map((t) => t.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {tasks.map((task) => (
+                      <SortableTask
+                        key={task.id}
+                        task={task}
+                        onDeleteClick={handleDeleteClick}
+                        getStatusBadge={getStatusBadge}
+                      />
+                    ))}
+                  </SortableContext>
+                </tbody>
+              </table>
+            </DndContext>
 
             {tasks.length === 0 && (
               <div className="text-center py-12">
@@ -226,7 +380,6 @@ export default function Tasks() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
       {showConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
