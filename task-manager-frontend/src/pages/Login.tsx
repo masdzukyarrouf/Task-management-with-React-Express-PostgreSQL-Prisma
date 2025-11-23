@@ -13,7 +13,6 @@ export default function Login() {
     e.preventDefault();
     setError("");
     try {
-      console.log("Sending:", { email, password });
 
       const res = await api.post("/auth/login/", { email, password });
       localStorage.setItem("token", res.data.token);

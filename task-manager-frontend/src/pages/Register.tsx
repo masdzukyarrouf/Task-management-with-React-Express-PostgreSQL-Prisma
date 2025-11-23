@@ -23,7 +23,6 @@ export default function Register() {
         password,
       });
 
-      console.log("Register response:", res.data);
 
       navigate("/"); // redirect after successful registration
     } catch (err: any) {
@@ -155,7 +154,7 @@ export default function Register() {
             <p className="text-gray-600 text-sm">
               Already have an account?{" "}
               <Link
-                to="/login"
+                to="/"
                 className="text-blue-600 hover:text-blue-700 font-medium hover:underline"
               >
                 Log in

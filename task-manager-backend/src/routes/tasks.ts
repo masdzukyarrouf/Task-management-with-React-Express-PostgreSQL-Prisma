@@ -174,7 +174,6 @@ const reorderTaskPositions = async (projectId: number) => {
 
     await prisma.$transaction(updateOperations);
 
-    console.log(`Reordered ${tasks.length} tasks for project ${projectId}`);
   } catch (error) {
     console.error('Error reordering tasks:', error);
   }
