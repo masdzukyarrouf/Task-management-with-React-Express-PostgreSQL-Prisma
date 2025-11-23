@@ -12,7 +12,7 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get("http://localhost:3000/projects")
+    axios.get("http://${import.meta.env.VITE_API_URL}/projects")
       .then(res => setProjects(res.data))
       .finally(() => setLoading(false));
   }, []);

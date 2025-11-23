@@ -11,9 +11,10 @@ export default function ProjectDetail() {
     name: string;
     description: string;
   };
+  
   useEffect(() => {
     if (!id) return;
-    axios.get(`http://localhost:4000/projects/${id}`).then((res) => {
+    axios.get(`http://${import.meta.env.VITE_API_URL}/projects/${id}`).then((res) => {
       setProject(res.data);
     });
   }, [id]);
