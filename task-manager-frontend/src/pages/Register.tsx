@@ -1,6 +1,7 @@
 import { useState } from "react";
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 export default function Register() {
   const [name, setName] = useState("");
@@ -153,12 +154,12 @@ export default function Register() {
           <div className="mt-6 text-center">
             <p className="text-gray-600 text-sm">
               Already have an account?{" "}
-              <a
-                href="/login"
+              <Link
+                to="/login"
                 className="text-blue-600 hover:text-blue-700 font-medium hover:underline"
               >
                 Log in
-              </a>
+              </Link>
             </p>
           </div>
         </div>
