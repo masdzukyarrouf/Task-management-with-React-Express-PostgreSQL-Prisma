@@ -23,6 +23,7 @@ export default function Register() {
         password,
       });
 
+      console.log("Register response:", res.data);
 
       navigate("/"); // redirect after successful registration
     } catch (err: any) {
