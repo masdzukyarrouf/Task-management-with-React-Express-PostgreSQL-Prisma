@@ -10,11 +10,14 @@ A task management application backend built with **Express**, **PostgreSQL**, an
 - [API Endpoints](#api-endpoints)  
 - [What I Learned](#what-i-learned)
 
+## Features
+
 - Create, read, update, and delete (CRUD) tasks  
-- Organize tasks by user (or project, if implemented)  
+- Organize tasks and project by user  
 - Validation and error handling  
 - Database migrations using Prisma  
-- REST API built with NestJS (or Express, depending on your code)  
+- REST API built with Express
+- Drag and Drop task with react
 
 ## Tech Stack
 
