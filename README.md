@@ -37,7 +37,7 @@ A task management application backend built with **Express**, **PostgreSQL**, an
 │   │   ├── utils/
 │   │   ├── server.ts                              
 │   └── package.json            
-└── task-manager-frontend/      # (if you have frontend)  
+└── task-manager-frontend/     
 │   ├── src/                     
 │   │   ├── api/     
 │   │   ├── components/
